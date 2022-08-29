@@ -1,0 +1,1 @@
+export type RepeatInterval = "DAY" | "WEEK" | "MONTH" | "YEAR";

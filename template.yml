@@ -1,0 +1,233 @@
+# This is the SAM template that represents the architecture of your serverless application
+# https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-template-basics.html
+
+# The AWSTemplateFormatVersion identifies the capabilities of the template
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/format-version-structure.html
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  How Many Days service
+
+# Transform section specifies one or more macros that AWS CloudFormation uses to process your template
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/transform-section-structure.html
+Transform: AWS::Serverless-2016-10-31
+
+# Shared configuration for all resources, more in
+# https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst 
+Globals:
+  Function:
+    # The PermissionsBoundary allows users to safely develop with their function's permissions constrained
+    # to their current application. All the functions and roles in this application have to include it and
+    # it has to be manually updated when you add resources to your application.
+    # More information in https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html
+    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/${AppId}-${AWS::Region}-PermissionsBoundary'
+
+Parameters:
+  AppId:
+    Type: String
+
+# Resources declares the AWS resources that you want to include in the stack
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
+Resources:
+  # Each Lambda function is defined by properties:
+  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole
+        - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+        - arn:aws:iam::aws:policy/service-role/AWSIoTDeviceDefenderPublishFindingsToSNSMitigationAction
+        - arn:aws:iam::aws:policy/AmazonSESFullAccess
+
+  authorizeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/authorizeLambda.authorize
+      Runtime: nodejs16.x
+      MemorySize: 128
+      Timeout: 60
+      Description: authorizer
+      Policies:
+        # Give Lambda basic execution Permission to the helloFromLambda
+        - AWSLambdaBasicExecutionRole
+      Role: !GetAtt LambdaRole.Arn
+
+  findEventsByUserIdFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/findEventsByUserIdLambda.findEventsByUserId
+      Runtime: nodejs16.x
+      MemorySize: 128
+      Timeout: 60
+      Description: Finds events by given user id
+      Policies:
+        # Give Lambda basic execution Permission to the helloFromLambda
+        - AWSLambdaBasicExecutionRole
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /events/{userId}
+            Method: GET
+      Role: !GetAtt LambdaRole.Arn
+
+  findRemindersByEventIdFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/findRemindersByEventIdLambda.findRemindersByEventId
+      Runtime: nodejs16.x
+      MemorySize: 128
+      Timeout: 60
+      Description: Finds reminders by given event id
+      Policies:
+        # Give Lambda basic execution Permission to the helloFromLambda
+        - AWSLambdaBasicExecutionRole
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /event/{eventId}/reminders/
+            Method: GET
+      Role: !GetAtt LambdaRole.Arn
+
+  upsertEventFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/upsertEventLambda.upsertEvent
+      Runtime: nodejs16.x
+      MemorySize: 128
+      Timeout: 60
+      Description: Upserts an event
+      Policies:
+        # Give Lambda basic execution Permission to the helloFromLambda
+        - AWSLambdaBasicExecutionRole
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /event
+            Method: PUT
+      Environment:
+        Variables:
+          TOPIC_EVENT_UPSERTED: !Ref EventUpsertedTopic
+      Role: !GetAtt LambdaRole.Arn
+
+  prepareRemindersByEventIdFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/prepareRemindersLambda.prepareRemindersByEventId
+      Runtime: nodejs16.x
+      MemorySize: 128
+      Timeout: 60
+      Description: Prepares reminders for an upserted event
+      Policies:
+        # Give Lambda basic execution Permission to the helloFromLambda
+        - AWSLambdaBasicExecutionRole
+      Events:
+        SnsEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref EventUpsertedTopic
+      Role: !GetAtt LambdaRole.Arn
+
+  fireRemindersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/fireRemindersLambda.fireReminders
+      Runtime: nodejs16.x
+      MemorySize: 128
+      Timeout: 60
+      Description: Finds and prepares reminders to be fired
+      Policies:
+        # Give Lambda basic execution Permission to the helloFromLambda
+        - AWSLambdaBasicExecutionRole
+      Events:
+        Cron:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 10 * * ? *)
+            Name: CronSchedule
+            Description: Trigger Lambda at 10:00 UTC daily
+      Environment:
+        Variables:
+          TOPIC_REMINDER_DUE: !Ref ReminderDueTopic
+      Role: !GetAtt LambdaRole.Arn
+
+  EventUpsertedTopic:
+    Type: AWS::SNS::Topic
+
+  ReminderDueQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "ReminderDueQueue.fifo"
+      FifoQueue: true
+      VisibilityTimeout: 120
+      ContentBasedDeduplication: true
+
+  ReminderDueTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      FifoTopic: true
+      DisplayName: "ReminderDueTopic.fifo"
+      ContentBasedDeduplication: true
+      Subscription:
+        - Protocol: sqs
+          Endpoint: !GetAtt ReminderDueQueue.Arn
+
+  # Policy allows SNS to publish to this SQS queue
+  ReminderDueSnsToSqsPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "Allow SNS publish to SQS"
+            Effect: Allow
+            Principal:
+              Service: "sns.amazonaws.com"
+            Resource: !GetAtt ReminderDueQueue.Arn
+            Action: SQS:SendMessage
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref ReminderDueTopic
+      Queues:
+        - Ref: ReminderDueQueue
+
+  fireReminderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/fireReminderLambda.fireReminder
+      Runtime: nodejs16.x
+      MemorySize: 128
+      Timeout: 60
+      Description: Sends a reminder received from SQS
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ReminderDueQueue.Arn
+            BatchSize: 1
+      Environment:
+        Variables:
+          QUEUE_REMINDER_DUE: !Ref ReminderDueQueue
+      Role: !GetAtt LambdaRole.Arn

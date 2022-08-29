@@ -1,0 +1,3 @@
+interface EventUpsertedMessage {
+    eventId: string,
+}
