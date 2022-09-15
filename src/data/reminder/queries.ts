@@ -1,12 +1,12 @@
-import {mongooseReminderModel} from "./mongooseReminderModel";
 import {MongoReminder} from "./MongoReminder";
+import {Model} from "mongoose";
 
-export const findReminderByIdQuery = async (id: string): Promise<MongoReminder | null> =>
+export const findReminderByIdQuery = async (id: string, mongooseReminderModel: Model<MongoReminder>): Promise<MongoReminder | null> =>
     await mongooseReminderModel
         .findById(id)
         .exec();
 
-export const findCurrentRemindersByEventIdQuery = async (eventId: string): Promise<MongoReminder[]> =>
+export const findCurrentRemindersByEventIdQuery = async (eventId: string, mongooseReminderModel: Model<MongoReminder>): Promise<MongoReminder[]> =>
     await mongooseReminderModel
         .find({
             eventId,
@@ -14,7 +14,7 @@ export const findCurrentRemindersByEventIdQuery = async (eventId: string): Promi
         })
         .exec();
 
-export const findRemindersToBeFiredQuery = async (today: Date): Promise<MongoReminder[]> =>
+export const findRemindersToBeFiredQuery = async (today: Date, mongooseReminderModel: Model<MongoReminder>): Promise<MongoReminder[]> =>
     await mongooseReminderModel
         .find({
             fired: false,

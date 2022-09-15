@@ -8,14 +8,14 @@ describe("Test ensureFind", () => {
                 a: "1",
             };
         }
-        const result = await (0, ensureFind_1.ensureFindSingle)(find, "1");
+        const result = await (0, ensureFind_1.ensureFindSingle)(find, {}, "1");
         expect(result).toBeTruthy();
-        expect(result.a).toBe("1");
+        expect(result.a).toEqual("1");
     });
     it("should throw when the is no entity found", async () => {
         async function find(id) {
             return null;
         }
-        await expect((0, ensureFind_1.ensureFindSingle)(find, "1")).rejects.toThrow();
+        await expect((0, ensureFind_1.ensureFindSingle)(find, {}, "1")).rejects.toThrow();
     });
 });

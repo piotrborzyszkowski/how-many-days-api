@@ -3,6 +3,8 @@ import {dbConnect, dbDisconnect} from "../data/connection";
 import {mapReminderFromMongo} from "../data/reminder/mapReminderFromMongo";
 import {findCurrentRemindersByEventIdQuery} from "../data/reminder/queries";
 import {getConnectionString} from "../data/getConnectionString";
+import {ensure} from "../ensure";
+import {mongooseReminderModel} from "../data/reminder/mongooseReminderModel";
 
 interface FindRemindersByEventIdLambdaPathParameters extends APIGatewayProxyEventPathParameters {
     eventId: string
@@ -16,13 +18,12 @@ export async function findRemindersByEventId(apiEvent: APIGatewayEvent): Promise
     console.log('received:', JSON.stringify(apiEvent));
 
     const {eventId} = <FindRemindersByEventIdLambdaPathParameters>pathParameters;
-    if (!eventId)
-        throw new Error("eventId is required");
+    ensure(eventId, "eventId");
     const eventIdDecoded = decodeURI(eventId);
 
     await dbConnect(getConnectionString);
     try {
-        const reminders = (await findCurrentRemindersByEventIdQuery(eventIdDecoded))
+        const reminders = (await findCurrentRemindersByEventIdQuery(eventIdDecoded, mongooseReminderModel))
             ?.map(reminder => mapReminderFromMongo(reminder));
 
         const response = {

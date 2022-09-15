@@ -1,7 +1,7 @@
 import {MongoEvent} from "./MongoEvent";
-import {mongooseEventModel} from "./mongooseEventModel";
+import {Model} from "mongoose";
 
-export const upsertEventCommand = async(mongoEvent: MongoEvent): Promise<string> => {
+export const upsertEventCommand = async (mongoEvent: MongoEvent, mongooseEventModel: Model<MongoEvent>): Promise<string> => {
     if (!mongoEvent._id) {
         const rawResult = await mongooseEventModel.insertMany(mongoEvent, {rawResult: true});
         return rawResult.insertedIds[0];

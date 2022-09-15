@@ -1,6 +1,6 @@
 import {Reminder} from "../../../../src/data/reminder/Reminder";
 import {Event} from "../../../../src/data/event/Event";
-import {createReminderAfterFiring} from "../../../../src/data/reminder/createReminderAfterFiring";
+import {createReminderAfterFiring} from "../../../../src/data/reminder/operations";
 
 describe("Test createReminderAfterFiring", () => {
     it("Creates a new reminder", () => {
@@ -11,9 +11,9 @@ describe("Test createReminderAfterFiring", () => {
 
         expect(newReminder).toBeTruthy();
         expect(newReminder.id).toBeUndefined();
-        expect(newReminder.fired).toBe(false);
-        expect(newReminder.eventId).toBe("a");
-        expect(newReminder.daysBefore).toBe(1);
+        expect(newReminder.fired).toEqual(false);
+        expect(newReminder.eventId).toEqual("a");
+        expect(newReminder.daysBefore).toEqual(1);
     });
 
     it("Throws on missing non-optional params", () => {
@@ -31,9 +31,9 @@ describe("Test createReminderAfterFiring", () => {
         const newReminder = createReminderAfterFiring(firedReminder, event);
 
         expect(newReminder.date).toBeTruthy();
-        expect(newReminder.date.getFullYear()).toBe(2022);
-        expect(newReminder.date.getMonth()).toBe(0);
-        expect(newReminder.date.getDate()).toBe(1);
+        expect(newReminder.date.getFullYear()).toEqual(2022);
+        expect(newReminder.date.getMonth()).toEqual(0);
+        expect(newReminder.date.getDate()).toEqual(1);
     });
 
     it("Sets new date in a week", () => {
@@ -43,9 +43,9 @@ describe("Test createReminderAfterFiring", () => {
         const newReminder = createReminderAfterFiring(firedReminder, event);
 
         expect(newReminder.date).toBeTruthy();
-        expect(newReminder.date.getFullYear()).toBe(2022);
-        expect(newReminder.date.getMonth()).toBe(0);
-        expect(newReminder.date.getDate()).toBe(7);
+        expect(newReminder.date.getFullYear()).toEqual(2022);
+        expect(newReminder.date.getMonth()).toEqual(0);
+        expect(newReminder.date.getDate()).toEqual(7);
     });
 
     it("Sets new date in a day month", () => {
@@ -55,9 +55,9 @@ describe("Test createReminderAfterFiring", () => {
         const newReminder = createReminderAfterFiring(firedReminder, event);
 
         expect(newReminder.date).toBeTruthy();
-        expect(newReminder.date.getFullYear()).toBe(2022);
-        expect(newReminder.date.getMonth()).toBe(0);
-        expect(newReminder.date.getDate()).toBe(31);
+        expect(newReminder.date.getFullYear()).toEqual(2022);
+        expect(newReminder.date.getMonth()).toEqual(0);
+        expect(newReminder.date.getDate()).toEqual(31);
     });
 
     it("Sets new date in a day year", () => {
@@ -67,9 +67,9 @@ describe("Test createReminderAfterFiring", () => {
         const newReminder = createReminderAfterFiring(firedReminder, event);
 
         expect(newReminder.date).toBeTruthy();
-        expect(newReminder.date.getFullYear()).toBe(2022);
-        expect(newReminder.date.getMonth()).toBe(11);
-        expect(newReminder.date.getDate()).toBe(31);
+        expect(newReminder.date.getFullYear()).toEqual(2022);
+        expect(newReminder.date.getMonth()).toEqual(11);
+        expect(newReminder.date.getDate()).toEqual(31);
     });
 
     it("Doesn't modify the existing reminder", () => {
@@ -78,19 +78,18 @@ describe("Test createReminderAfterFiring", () => {
 
         const newReminder = createReminderAfterFiring(firedReminder, event);
 
-        expect(newReminder).toBeTruthy();
-        expect(newReminder.id).toBeUndefined();
-        expect(newReminder.fired).toBe(false);
-        expect(newReminder.eventId).toBe("a");
-        expect(newReminder.daysBefore).toBe(1);
-        expect(newReminder.date.getFullYear()).toBe(2022);
-        expect(newReminder.date.getMonth()).toBe(11);
-        expect(newReminder.date.getDate()).toBe(31);
+        expect(newReminder.date).toBeTruthy();
+        expect(newReminder.fired).toEqual(false);
+        expect(newReminder.eventId).toEqual("a");
+        expect(newReminder.daysBefore).toEqual(1);
+        expect(newReminder.date.getFullYear()).toEqual(2022);
+        expect(newReminder.date.getMonth()).toEqual(11);
+        expect(newReminder.date.getDate()).toEqual(31);
 
-        expect(firedReminder.fired).toBe(true);
-        expect(firedReminder.id).toBe("1");
-        expect(firedReminder.date.getFullYear()).toBe(2021);
-        expect(firedReminder.date.getMonth()).toBe(11);
-        expect(firedReminder.date.getDate()).toBe(31);
+        expect(firedReminder.fired).toEqual(true);
+        expect(firedReminder.id).toEqual("1");
+        expect(firedReminder.date.getFullYear()).toEqual(2021);
+        expect(firedReminder.date.getMonth()).toEqual(11);
+        expect(firedReminder.date.getDate()).toEqual(31);
     });
 });

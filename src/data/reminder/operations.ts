@@ -1,5 +1,12 @@
 import {Reminder} from "./Reminder";
 import {Event} from "../event/Event";
+import {MongoReminder} from "./MongoReminder";
+import {MongoEvent} from "../event/MongoEvent";
+import {insertRemindersCommand, markReminderFiredCommand} from "./commands";
+import {mapReminderFromMongo} from "./mapReminderFromMongo";
+import {mapEventFromMongo} from "../event/mapEventFromMongo";
+import {mapReminderToMongo} from "./mapReminderToMongo";
+import {Model} from "mongoose";
 
 export function createReminderAfterFiring(oldReminder: Reminder, event: Event): Reminder {
     if (!oldReminder)
@@ -26,4 +33,11 @@ export function createReminderAfterFiring(oldReminder: Reminder, event: Event): 
     };
 
     return newReminder;
+}
+
+export async function rotateReminders(reminder: MongoReminder, event: MongoEvent, mongooseReminderModel: Model<MongoReminder>): Promise<void> {
+    await markReminderFiredCommand(reminder._id!, mongooseReminderModel);
+
+    const newReminder = createReminderAfterFiring(mapReminderFromMongo(reminder)!, mapEventFromMongo(event)!);
+    await insertRemindersCommand([mapReminderToMongo(newReminder)], mongooseReminderModel);
 }

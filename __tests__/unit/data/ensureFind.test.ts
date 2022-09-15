@@ -12,9 +12,9 @@ describe("Test ensureFind", () => {
             };
         }
 
-        const result = await ensureFindSingle(find, "1");
+        const result = await ensureFindSingle(find, <any>{}, "1");
         expect(result).toBeTruthy();
-        expect(result.a).toBe("1");
+        expect(result.a).toEqual("1");
     });
 
     it("should throw when the is no entity found", async () => {
@@ -22,6 +22,6 @@ describe("Test ensureFind", () => {
             return null;
         }
 
-        await expect(ensureFindSingle(find, "1")).rejects.toThrow();
+        await expect(ensureFindSingle(find, <any>{}, "1")).rejects.toThrow();
     });
 });

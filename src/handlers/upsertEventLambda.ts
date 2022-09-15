@@ -5,16 +5,18 @@ import {Event} from "../data/event/Event";
 import {mapEventToMongo} from "../data/event/mapEventToMongo";
 import {upsertEventCommand} from "../data/event/commands";
 import {SNS} from "aws-sdk";
+import {snsPublish} from "../aws/snsPublish";
+import {ensure} from "../ensure";
+import {mongooseEventModel} from "../data/event/mongooseEventModel";
 
 export async function upsertEvent(apiEvent: APIGatewayEvent): Promise<APIGatewayProxyResult> {
+    console.log('received:', JSON.stringify(apiEvent));
+
     const {httpMethod, path} = apiEvent;
     if (httpMethod !== 'PUT')
         throw new Error(`upsertEvent only accept PUT method, you tried: ${httpMethod}`);
-
-    console.log('received:', JSON.stringify(apiEvent));
-
-    if (!apiEvent.body)
-        throw new Error("request body is required");
+    ensure(process.env.TOPIC_EVENT_UPSERTED, "process.env.TOPIC_EVENT_UPSERTED");
+    ensure(apiEvent.body, "apiEvent.body");
 
     const event = <Event>JSON.parse(apiEvent.body!);
     console.log(`event: ${JSON.stringify(event)}`);
@@ -23,20 +25,10 @@ export async function upsertEvent(apiEvent: APIGatewayEvent): Promise<APIGateway
 
     await dbConnect(getConnectionString);
     try {
-        const eventId = (await upsertEventCommand(mongoEvent));
+        const eventId = await upsertEventCommand(mongoEvent, mongooseEventModel);
         console.log(`upserted an event with id ${eventId}`);
 
-        const upsertedMessage: EventUpsertedMessage = {
-            eventId
-        };
-
-        const publish = {
-            Message: JSON.stringify(upsertedMessage),
-            TopicArn: process.env.TOPIC_EVENT_UPSERTED,
-        };
-
-        const publishResult = await new SNS().publish(publish).promise();
-        console.log(`published ${JSON.stringify(publish)} with result ${JSON.stringify(publishResult)}`);
+        await snsPublish(<EventUpsertedMessage>{eventId}, process.env.TOPIC_EVENT_UPSERTED!, undefined, new SNS());
 
         const response = {
             statusCode: 200,

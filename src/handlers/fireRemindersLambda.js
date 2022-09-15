@@ -30,28 +30,27 @@ const queries_1 = require("../data/reminder/queries");
 const aws_sdk_1 = require("aws-sdk");
 const mapReminderFromMongo_1 = require("../data/reminder/mapReminderFromMongo");
 const dotenv = __importStar(require("dotenv"));
+const getEndOfToday_1 = require("../getEndOfToday");
+const snsPublish_1 = require("../aws/snsPublish");
+const ensure_1 = require("../ensure");
+const mongooseReminderModel_1 = require("../data/reminder/mongooseReminderModel");
 async function fireReminders(scheduledEvent) {
     console.log(`Received scheduledEvent: ${JSON.stringify(scheduledEvent)}`);
-    let today = new Date();
-    today.setHours(23, 59, 59, 999);
+    (0, ensure_1.ensure)(process.env.TOPIC_REMINDER_DUE, "process.env.TOPIC_REMINDER_DUE");
+    (0, ensure_1.ensure)(process.env.MESSAGE_GROUP_ID_REMINDER_DUE, "process.env.MESSAGE_GROUP_ID_REMINDER_DUE");
+    const today = (0, getEndOfToday_1.getEndOfToday)(Date);
     console.log(`Looking for all reminders due by ${today}`);
     dotenv.config();
     const sns = new aws_sdk_1.SNS();
     await (0, connection_1.dbConnect)(getConnectionString_1.getConnectionString);
     try {
-        const reminders = (await (0, queries_1.findRemindersToBeFiredQuery)(today)).map(mapReminderFromMongo_1.mapReminderFromMongo);
+        const reminders = (await (0, queries_1.findRemindersToBeFiredQuery)(today, mongooseReminderModel_1.mongooseReminderModel)).map(mapReminderFromMongo_1.mapReminderFromMongo);
         for (const reminder of reminders) {
             const reminderDueMessage = {
                 reminderId: reminder?.id,
                 eventId: reminder?.eventId,
             };
-            const publish = {
-                Message: JSON.stringify(reminderDueMessage),
-                TopicArn: process.env.TOPIC_REMINDER_DUE,
-                MessageGroupId: process.env.MESSAGE_GROUP_ID_REMINDER_DUE,
-            };
-            const publishResult = await sns.publish(publish).promise();
-            console.log(`published ${JSON.stringify(publish)} with result ${JSON.stringify(publishResult)}`);
+            await (0, snsPublish_1.snsPublish)(reminderDueMessage, process.env.TOPIC_REMINDER_DUE, process.env.MESSAGE_GROUP_ID_REMINDER_DUE, sns);
         }
         console.log(`Successfully published ${reminders.length} reminders`);
     }

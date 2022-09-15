@@ -8,6 +8,8 @@ import {deleteReminderCommand, insertRemindersCommand} from "../data/reminder/co
 import {mapReminderToMongo} from "../data/reminder/mapReminderToMongo";
 import {dbConnect, dbDisconnect} from "../data/connection";
 import {getConnectionString} from "../data/getConnectionString";
+import {mongooseEventModel} from "../data/event/mongooseEventModel";
+import {mongooseReminderModel} from "../data/reminder/mongooseReminderModel";
 
 export async function prepareRemindersByEventId(snsEvent: SNSEvent): Promise<void> {
     console.log(`SNS event received: ${JSON.stringify(snsEvent)}`);
@@ -16,7 +18,7 @@ export async function prepareRemindersByEventId(snsEvent: SNSEvent): Promise<voi
     try {
         for (const record of snsEvent.Records) {
             const message = <EventUpsertedMessage>JSON.parse(record.Sns.Message);
-            const event = mapEventFromMongo(await findEventByIdQuery(message.eventId));
+            const event = mapEventFromMongo(await findEventByIdQuery(message.eventId, mongooseEventModel));
             console.log(`found event: ${JSON.stringify(event)}`);
 
             if (!event) {
@@ -28,16 +30,17 @@ export async function prepareRemindersByEventId(snsEvent: SNSEvent): Promise<voi
                 return;
             }
 
-            const existingReminders = (await findCurrentRemindersByEventIdQuery(message.eventId)).map(mr => mapReminderFromMongo(mr)!);
-            console.log(`existingReminders ${JSON.stringify(existingReminders)}`);
+            const existingReminders = (await findCurrentRemindersByEventIdQuery(message.eventId, mongooseReminderModel)).map(mr => mapReminderFromMongo(mr)!);
             const {toBeDeletedReminders, toBeInsertedReminders} = createRemindersForEvent(event, existingReminders);
+
+            console.log(`existingReminders ${JSON.stringify(existingReminders)}`);
             console.log(`toBeDeletedReminders ${JSON.stringify(toBeDeletedReminders)}`);
             console.log(`toBeInsertedReminders ${JSON.stringify(toBeInsertedReminders)}`);
 
             for (const reminder of toBeDeletedReminders) {
-                await deleteReminderCommand(reminder.id!);
+                await deleteReminderCommand(reminder.id!, mongooseReminderModel);
             }
-            await insertRemindersCommand(toBeInsertedReminders.map(mapReminderToMongo));
+            await insertRemindersCommand(toBeInsertedReminders.map(mapReminderToMongo), mongooseReminderModel);
             console.log(`reminders updated for event ${event.id}`);
         }
     } finally {

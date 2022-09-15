@@ -16,7 +16,7 @@ describe("Test createRemindersForEvent", () => {
         expect(result.toBeInsertedReminders).toBeTruthy();
         expect(result.toBeDeletedReminders).toBeTruthy();
 
-        expect(result.toBeDeletedReminders.length).toBe(0);
+        expect(result.toBeDeletedReminders.length).toEqual(0);
         expect(result.toBeInsertedReminders.length).toEqual(3);
         expect(result.toBeInsertedReminders.find(r =>
             r.date.getFullYear() == 2029
@@ -33,6 +33,11 @@ describe("Test createRemindersForEvent", () => {
             && r.date.getMonth() == 11
             && r.date.getDate() == 31)
         ).toBeTruthy();
+        expect(result.toBeInsertedReminders.find(r =>
+            r.date.getFullYear() == 2000
+            && r.date.getMonth() == 0
+            && r.date.getDate() == 1)
+        ).toBeFalsy();
     });
 
     it("should not crete reminders if they already exist", () => {
@@ -46,7 +51,7 @@ describe("Test createRemindersForEvent", () => {
         expect(result.toBeInsertedReminders).toBeTruthy();
         expect(result.toBeDeletedReminders).toBeTruthy();
 
-        expect(result.toBeDeletedReminders.length).toBe(0);
+        expect(result.toBeDeletedReminders.length).toEqual(0);
         expect(result.toBeInsertedReminders.length).toEqual(0);
     });
 
@@ -62,7 +67,7 @@ describe("Test createRemindersForEvent", () => {
         expect(result.toBeDeletedReminders).toBeTruthy();
 
         expect(result.toBeInsertedReminders.length).toEqual(0);
-        expect(result.toBeDeletedReminders.length).toBe(1);
+        expect(result.toBeDeletedReminders.length).toEqual(1);
 
         expect(result.toBeDeletedReminders.find(r =>
             r.date.getFullYear() == 2029
